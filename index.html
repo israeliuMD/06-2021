@@ -2531,6 +2531,7 @@ function returnToExam(questionIndex = null) {
       generateSidebarNavigation();
       init();
     }
+	
 	// Add this code right before the closing +script+ tag in your HTML file
 
 // Object to store notes for each question
@@ -2542,38 +2543,35 @@ let notesVisible = false;
 
 // Load notes from localStorage when the page loads
 function loadNotes() {
-  // Create a more specific exam identifier based on the title
-  const pageTitle = document.title;
-  const examId = pageTitle.replace(/\s+/g, '-').toLowerCase();
+  // Create a more specific exam identifier based on the URL path
+  const examId = window.location.pathname.split('/').filter(Boolean).join('-');
   
-  // Try to get saved notes using this specific identifier
-  const savedNotes = localStorage.getItem(`examNotes-${examId}`);
-  console.log(`Loading notes for exam: ${examId}`); // For debugging
+  // If there's no specific path, use the title as fallback
+  const finalExamId = examId || document.title.replace(/\s+/g, '-').toLowerCase();
+  
+  console.log(`Loading notes for exam: ${finalExamId}`); // For debugging
+  
+  const savedNotes = localStorage.getItem(`examNotes-${finalExamId}`);
   
   if (savedNotes) {
     try {
       questionNotes = JSON.parse(savedNotes);
     } catch (e) {
-      // If parsing fails, start with empty notes
       questionNotes = {};
     }
   } else {
-    // If no saved notes found, start with empty object
     questionNotes = {};
   }
 }
 
-// Save notes to localStorage
 function saveNotes() {
-  // Create a more specific exam identifier based on the title
-  const pageTitle = document.title;
-  const examId = pageTitle.replace(/\s+/g, '-').toLowerCase();
+  // Use the same identifier creation logic as in loadNotes
+  const examId = window.location.pathname.split('/').filter(Boolean).join('-');
+  const finalExamId = examId || document.title.replace(/\s+/g, '-').toLowerCase();
   
-  // Save notes using this specific identifier
-  localStorage.setItem(`examNotes-${examId}`, JSON.stringify(questionNotes));
-  console.log(`Saving notes for exam: ${examId}`); // For debugging
+  localStorage.setItem(`examNotes-${finalExamId}`, JSON.stringify(questionNotes));
+  console.log(`Saving notes for exam: ${finalExamId}`); // For debugging
 }
-
 // Add the left sidebar notes panel
 function addNotesPanel() {
   // Create notes toggle button at the top left
@@ -2858,7 +2856,7 @@ function createPrintableNotesPage() {
       </style>
     </head>
     <body>
-      <div class="notes-title">הערות לבחינה</div>
+      <div class="notes-title">06-2021 הערות לבחינה</div>
       <button class="print-btn no-print" onclick="window.print()">הדפס הערות</button>
       <div id="notes-container"></div>
       <button class="print-btn no-print" onclick="window.print()">הדפס הערות</button>
@@ -2965,20 +2963,32 @@ function addNoteStyles() {
   document.head.appendChild(style);
 }
 
+	// Create a helper function to ensure notes sync when changing questions
+function changeQuestion(newIndex) {
+  if (notesVisible) {
+    closeNotes();
+  }
+  currentQuestionIndex = newIndex;
+  resetShowingAnswers();
+  renderCurrentQuestion();
+  updateControls();
+}
 // Override existing functions to integrate notes functionality
 
 // Modified nextQuestion function to handle notes
 const originalNextQuestion = nextQuestion;
 nextQuestion = function() {
-  closeNotes(); // Close notes panel when changing questions
-  originalNextQuestion();
+  if (currentQuestionIndex < questions.length - 1) {
+    changeQuestion(currentQuestionIndex + 1);
+  }
 };
 
 // Modified prevQuestion function to handle notes
 const originalPrevQuestion = prevQuestion;
 prevQuestion = function() {
-  closeNotes(); // Close notes panel when changing questions
-  originalPrevQuestion();
+  if (currentQuestionIndex > 0) {
+    changeQuestion(currentQuestionIndex - 1);
+  }
 };
 
 // Modified renderStudyMode function to add notes in study mode

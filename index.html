@@ -2538,9 +2538,18 @@ let questionNotes = {};
 let notesVisible = false;
 
 // Load notes from localStorage when the page loads
+// Modify the loadNotes and saveNotes functions to use more explicit exam identifiers
+
+// Load notes from localStorage when the page loads
 function loadNotes() {
-  const examId = window.location.pathname.split('/').pop() || document.title.replace(/\s+/g, '-').toLowerCase();
+  // Create a more specific exam identifier based on the title
+  const pageTitle = document.title;
+  const examId = pageTitle.replace(/\s+/g, '-').toLowerCase();
+  
+  // Try to get saved notes using this specific identifier
   const savedNotes = localStorage.getItem(`examNotes-${examId}`);
+  console.log(`Loading notes for exam: ${examId}`); // For debugging
+  
   if (savedNotes) {
     try {
       questionNotes = JSON.parse(savedNotes);
@@ -2548,13 +2557,21 @@ function loadNotes() {
       // If parsing fails, start with empty notes
       questionNotes = {};
     }
+  } else {
+    // If no saved notes found, start with empty object
+    questionNotes = {};
   }
 }
 
 // Save notes to localStorage
 function saveNotes() {
-  const examId = window.location.pathname.split('/').pop() || document.title.replace(/\s+/g, '-').toLowerCase();
+  // Create a more specific exam identifier based on the title
+  const pageTitle = document.title;
+  const examId = pageTitle.replace(/\s+/g, '-').toLowerCase();
+  
+  // Save notes using this specific identifier
   localStorage.setItem(`examNotes-${examId}`, JSON.stringify(questionNotes));
+  console.log(`Saving notes for exam: ${examId}`); // For debugging
 }
 
 // Add the left sidebar notes panel
@@ -2989,10 +3006,21 @@ setMode = function(newMode) {
   }
 };
 
-// Modified showResults function to add print notes button
+// Modified showResults function to hide the notes button
 const originalShowResults = showResults;
 showResults = function() {
+  // First hide the notes toggle button
+  const toggleButton = document.getElementById('toggle-notes-btn');
+  if (toggleButton) {
+    toggleButton.style.display = 'none';
+  }
+  
+  // Close notes panel if it's open
+  closeNotes();
+  
+  // Call the original function
   originalShowResults();
+  
   // Add print notes button to results
   setTimeout(addPrintNotesButton, 100);
 };

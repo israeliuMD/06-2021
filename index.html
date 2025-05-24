@@ -344,6 +344,17 @@
     font-size: 0.9em;
   }
 }
+	    #save-exam-btn, #load-exam-btn, #clear-exam-btn {
+  margin: 0 5px;
+}
+
+@media screen and (max-width: 768px) {
+  #save-exam-btn, #load-exam-btn, #clear-exam-btn {
+    margin: 5px 0;
+    display: block;
+    width: 100%;
+  }
+}
     }
   </style>
 </head>
@@ -362,6 +373,9 @@
       <button id="exam-mode-btn" onclick="setMode('exam')" disabled>מצב בחינה</button>
       <button id="study-mode-btn" onclick="setMode('study')">מצב למידה</button>
       <button id="toggle-answers-btn" onclick="toggleAnswers()" style="display: none;">הצג תשובות</button>
+	<button id="save-exam-btn" onclick="downloadExamState()" style="background-color: #4caf50;">שמור בחינה</button>
+	<button id="load-exam-btn" onclick="uploadExamState()" style="background-color: #ff9800;">טען בחינה</button>
+	<button id="clear-exam-btn" onclick="clearExamState()" style="background-color: #f44336;">התחל מחדש</button>
     </div>
     
     <div id="score-display" style="display: none;" class="score-container">
@@ -2270,6 +2284,8 @@ const questions = [
       
       selectedAnswers[questionId] = answer;
       renderCurrentQuestion();
+	    autoSaveExamState();
+
     }
     
     // Navigation functions
@@ -2280,6 +2296,7 @@ function nextQuestion() {
     resetShowingAnswers(); // Use the helper function
     renderCurrentQuestion();
     updateControls();
+	  autoSaveExamState();
   }
 }
     
@@ -2290,6 +2307,7 @@ function prevQuestion() {
     resetShowingAnswers(); // Use the helper function
     renderCurrentQuestion();
     updateControls();
+	  autoSaveExamState();
   }
 }
 
@@ -2551,7 +2569,169 @@ let notesVisible = false;
 
 // Load notes from localStorage when the page loads
 // Modify the loadNotes and saveNotes functions to use more explicit exam identifiers
+// Auto-save functionality
+function autoSaveExamState() {
+  const examId = window.location.pathname.split('/').filter(Boolean).join('-');
+  const finalExamId = examId || document.title.replace(/\s+/g, '-').toLowerCase();
+  
+  const examState = {
+    selectedAnswers: selectedAnswers,
+    currentQuestionIndex: currentQuestionIndex,
+    timestamp: new Date().toISOString(),
+    examId: finalExamId,
+    examTitle: document.title
+  };
+  
+  localStorage.setItem(`examState-${finalExamId}`, JSON.stringify(examState));
+}
 
+// Load exam state from LocalStorage
+function loadExamState() {
+  const examId = window.location.pathname.split('/').filter(Boolean).join('-');
+  const finalExamId = examId || document.title.replace(/\s+/g, '-').toLowerCase();
+  
+  const savedState = localStorage.getItem(`examState-${finalExamId}`);
+  
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      
+      const savedDate = new Date(state.timestamp);
+      const dateString = savedDate.toLocaleString('he-IL', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      const answeredCount = Object.keys(state.selectedAnswers).length;
+      const message = `נמצאה בחינה שמורה מתאריך ${dateString}\nענית על ${answeredCount} שאלות מתוך ${questions.length}\n\nהאם ברצונך להמשיך מהמקום בו הפסקת?`;
+      
+      if (confirm(message)) {
+        selectedAnswers = state.selectedAnswers;
+        currentQuestionIndex = state.currentQuestionIndex;
+        renderCurrentQuestion();
+        updateControls();
+        updateSidebarNavigation();
+        return true;
+      }
+    } catch (e) {
+      console.error('Error loading saved state:', e);
+    }
+  }
+  
+  return false;
+}
+
+// Download exam state as JSON file
+function downloadExamState() {
+  const examState = {
+    selectedAnswers: selectedAnswers,
+    currentQuestionIndex: currentQuestionIndex,
+    timestamp: new Date().toISOString(),
+    examTitle: document.title,
+    questionNotes: questionNotes
+  };
+  
+  const dataStr = JSON.stringify(examState, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  
+  const fileName = `exam-save-${new Date().toISOString().split('T')[0]}.json`;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(dataBlob);
+  link.download = fileName;
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  showSaveConfirmation('הבחינה נשמרה כקובץ');
+}
+
+// Upload and load exam state from file
+function uploadExamState() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  
+  input.onchange = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const state = JSON.parse(e.target.result);
+        
+        if (!state.selectedAnswers || typeof state.currentQuestionIndex !== 'number') {
+          alert('קובץ לא תקין');
+          return;
+        }
+        
+        selectedAnswers = state.selectedAnswers || {};
+        currentQuestionIndex = state.currentQuestionIndex || 0;
+        
+        if (state.questionNotes) {
+          questionNotes = state.questionNotes;
+          saveNotes();
+        }
+        
+        renderCurrentQuestion();
+        updateControls();
+        updateSidebarNavigation();
+        
+        showSaveConfirmation('הבחינה נטענה בהצלחה');
+      } catch (e) {
+        alert('שגיאה בטעינת הקובץ');
+      }
+    };
+    
+    reader.readAsText(file);
+  };
+  
+  input.click();
+}
+
+// Show save confirmation message
+function showSaveConfirmation(message = 'הבחינה נשמרה') {
+  const confirmation = document.createElement('div');
+  confirmation.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4caf50;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    z-index: 10000;
+    font-family: Arial, sans-serif;
+  `;
+  confirmation.textContent = message;
+  document.body.appendChild(confirmation);
+  
+  setTimeout(() => {
+    confirmation.remove();
+  }, 2000);
+}
+
+// Clear saved exam state
+function clearExamState() {
+  if (confirm('האם אתה בטוח שברצונך למחוק את ההתקדמות השמורה ולהתחיל מחדש?')) {
+    const examId = window.location.pathname.split('/').filter(Boolean).join('-');
+    const finalExamId = examId || document.title.replace(/\s+/g, '-').toLowerCase();
+    
+    localStorage.removeItem(`examState-${finalExamId}`);
+    selectedAnswers = {};
+    currentQuestionIndex = 0;
+    renderCurrentQuestion();
+    updateControls();
+    updateSidebarNavigation();
+    
+    showSaveConfirmation('הבחינה אופסה');
+  }
+}
 // Load notes from localStorage when the page loads
 function loadNotes() {
   // Create a more specific exam identifier based on the URL path
@@ -3386,6 +3566,10 @@ window.onload = function() {
   
   // Load references after the app has initialized
   loadReferences();
+	 // Load exam state if available
+  setTimeout(() => {
+    loadExamState();
+  }, 100);
 };
   </script>
 </body>

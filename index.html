@@ -2310,6 +2310,7 @@ const questions = [
       selectedAnswers[questionId] = answer;
       renderCurrentQuestion();
 	    autoSaveExamState();
+	    autoSaveProgress();
 
     }
     
@@ -2580,14 +2581,23 @@ function returnToExam(questionIndex = null) {
       updateControls();
     }
     // Save exam progress
+// Save exam progress as JSON file (manual save)
 function saveExam() {
   const examData = {
     currentQuestionIndex: currentQuestionIndex,
     selectedAnswers: selectedAnswers,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    examTitle: "בחינת מחלות עיניים - שלב א' מועד 06.2021"
   };
   
-  localStorage.setItem('examProgress-06-2021', JSON.stringify(examData));
+  // Create and download JSON file
+  const dataStr = JSON.stringify(examData, null, 2);
+  const dataBlob = new Blob([dataStr], {type: 'application/json'});
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(dataBlob);
+  link.download = 'exam-progress-06-2021.json';
+  link.click();
   
   // Show confirmation
   const btn = document.getElementById('save-exam-btn');
@@ -2601,38 +2611,72 @@ function saveExam() {
   }, 2000);
 }
 
-// Load exam progress
+// Load exam progress from JSON file
 function loadExam() {
-  const savedData = localStorage.getItem('examProgress-06-2021');
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
   
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const examData = JSON.parse(e.target.result);
+        
+        // Restore progress
+        currentQuestionIndex = examData.currentQuestionIndex || 0;
+        selectedAnswers = examData.selectedAnswers || {};
+        
+        // Update display
+        renderCurrentQuestion();
+        updateControls();
+        autoSaveProgress(); // Save to browser memory too
+        
+        // Show confirmation
+        const btn = document.getElementById('load-exam-btn');
+        const originalText = btn.textContent;
+        btn.textContent = 'נטען!';
+        btn.style.backgroundColor = '#4caf50';
+        
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.backgroundColor = '#4a90e2';
+        }, 2000);
+        
+      } catch (error) {
+        alert('שגיאה בקריאת קובץ הבחינה');
+      }
+    };
+    reader.readAsText(file);
+  };
+  
+  input.click();
+}
+
+// Auto-save to browser memory (happens automatically)
+function autoSaveProgress() {
+  const examData = {
+    currentQuestionIndex: currentQuestionIndex,
+    selectedAnswers: selectedAnswers,
+    timestamp: new Date().toISOString()
+  };
+  localStorage.setItem('examProgress-06-2021-auto', JSON.stringify(examData));
+}
+
+// Auto-load from browser memory when page loads
+function autoLoadProgress() {
+  const savedData = localStorage.getItem('examProgress-06-2021-auto');
   if (savedData) {
     try {
       const examData = JSON.parse(savedData);
-      
-      // Restore progress
       currentQuestionIndex = examData.currentQuestionIndex || 0;
       selectedAnswers = examData.selectedAnswers || {};
-      
-      // Update display
-      renderCurrentQuestion();
-      updateControls();
-      
-      // Show confirmation
-      const btn = document.getElementById('load-exam-btn');
-      const originalText = btn.textContent;
-      btn.textContent = 'נטען!';
-      btn.style.backgroundColor = '#4caf50';
-      
-      setTimeout(() => {
-        btn.textContent = originalText;
-        btn.style.backgroundColor = '#4a90e2';
-      }, 2000);
-      
     } catch (e) {
-      alert('שגיאה בטעינת הבחינה השמורה');
+      // If there's an error, just start fresh
     }
-  } else {
-    alert('לא נמצאה בחינה שמורה');
   }
 }
 
@@ -2654,10 +2698,11 @@ function restartExam() {
   }
 }
     // Initialize the app when the page loads
-    window.onload = function() {
-      generateSidebarNavigation();
-      init();
-    }
+window.onload = function() {
+  autoLoadProgress(); // Load previous progress automatically
+  generateSidebarNavigation();
+  init();
+}
 
 	// Add this code right before the closing +script+ tag in your HTML file
 

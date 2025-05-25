@@ -66,12 +66,13 @@
       border-color: #4a90e2;
     }
     
-    .main-content {
-      margin-right: 350px;
-      padding: 50px;
-      max-width: 800px;
-      margin-left: auto;
-    }
+.main-content {
+  margin-top: 60px;
+  margin-right: 350px;
+  padding: 50px;
+  max-width: 800px;
+  margin-left: auto;
+}
     .question-container {
       background-color: white;
       border-radius: 8px;
@@ -356,6 +357,26 @@
   }
 }
     }
+	  .control-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  border-bottom: 2px solid #ddd;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  z-index: 200;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+}
+
+.control-panel button {
+  padding: 6px 12px;
+  font-size: 0.9em;
+}
   </style>
 </head>
 <body>
@@ -369,14 +390,18 @@
   <div class="main-content">
     <h1>בחינת מחלות עיניים - שלב א' מועד 06.2021</h1>
     
-    <div class="mode-toggle no-print">
-      <button id="exam-mode-btn" onclick="setMode('exam')" disabled>מצב בחינה</button>
-      <button id="study-mode-btn" onclick="setMode('study')">מצב למידה</button>
-      <button id="toggle-answers-btn" onclick="toggleAnswers()" style="display: none;">הצג תשובות</button>
-	<button id="save-exam-btn" onclick="downloadExamState()" style="background-color: #4caf50;">שמור בחינה</button>
-	<button id="load-exam-btn" onclick="uploadExamState()" style="background-color: #ff9800;">טען בחינה</button>
-	<button id="clear-exam-btn" onclick="clearExamState()" style="background-color: #f44336;">התחל מחדש</button>
-    </div>
+<div class="control-panel no-print">
+  <button id="exam-mode-btn" onclick="setMode('exam')" disabled>מצב בחינה</button>
+  <button id="study-mode-btn" onclick="setMode('study')">מצב למידה</button>
+  <button id="save-exam-btn" onclick="saveExam()">שמור בחינה</button>
+  <button id="load-exam-btn" onclick="loadExam()">טען בחינה</button>
+  <button id="restart-exam-btn" onclick="restartExam()">התחל מחדש</button>
+  <button id="finish-btn" onclick="showResults()" class="finish-btn" style="display: none;">סיים בחינה</button>
+</div>
+
+<div class="mode-toggle no-print">
+  <button id="toggle-answers-btn" onclick="toggleAnswers()" style="display: none;">הצג תשובות</button>
+</div>
     
     <div id="score-display" style="display: none;" class="score-container">
       <div class="score-title">ציון</div>

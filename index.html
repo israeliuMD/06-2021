@@ -2579,7 +2579,80 @@ function returnToExam(questionIndex = null) {
       renderCurrentQuestion();
       updateControls();
     }
+    // Save exam progress
+function saveExam() {
+  const examData = {
+    currentQuestionIndex: currentQuestionIndex,
+    selectedAnswers: selectedAnswers,
+    timestamp: new Date().toISOString()
+  };
+  
+  localStorage.setItem('examProgress-06-2021', JSON.stringify(examData));
+  
+  // Show confirmation
+  const btn = document.getElementById('save-exam-btn');
+  const originalText = btn.textContent;
+  btn.textContent = 'נשמר!';
+  btn.style.backgroundColor = '#4caf50';
+  
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.style.backgroundColor = '#4a90e2';
+  }, 2000);
+}
+
+// Load exam progress
+function loadExam() {
+  const savedData = localStorage.getItem('examProgress-06-2021');
+  
+  if (savedData) {
+    try {
+      const examData = JSON.parse(savedData);
+      
+      // Restore progress
+      currentQuestionIndex = examData.currentQuestionIndex || 0;
+      selectedAnswers = examData.selectedAnswers || {};
+      
+      // Update display
+      renderCurrentQuestion();
+      updateControls();
+      
+      // Show confirmation
+      const btn = document.getElementById('load-exam-btn');
+      const originalText = btn.textContent;
+      btn.textContent = 'נטען!';
+      btn.style.backgroundColor = '#4caf50';
+      
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.backgroundColor = '#4a90e2';
+      }, 2000);
+      
+    } catch (e) {
+      alert('שגיאה בטעינת הבחינה השמורה');
+    }
+  } else {
+    alert('לא נמצאה בחינה שמורה');
+  }
+}
+
+// Restart exam
+function restartExam() {
+  if (confirm('האם אתה בטוח שברצונך להתחיל מחדש? כל התשובות יימחקו.')) {
+    currentQuestionIndex = 0;
+    selectedAnswers = {};
+    showingAnswers = false;
     
+    // Reset UI
+    document.getElementById('toggle-answers-btn').textContent = 'הצג תשובות';
+    document.getElementById('score-display').style.display = 'none';
+    document.getElementById('results-container').style.display = 'none';
+    document.getElementById('question-container').style.display = 'block';
+    
+    renderCurrentQuestion();
+    updateControls();
+  }
+}
     // Initialize the app when the page loads
     window.onload = function() {
       generateSidebarNavigation();
